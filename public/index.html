@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Painel de Tarefas</title>
+<link rel="stylesheet" href="style.css" />
+<script>
+  // Aplica o modo escuro salvo antes mesmo da página desenhar, pra não
+  // piscar claro-depois-escuro ao carregar.
+  if (localStorage.getItem('darkMode') === '1') {
+    document.documentElement.classList.add('dark-mode');
+  }
+</script>
+</head>
+<body>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-badge">P</div>
+        <span>Painel</span>
+      </div>
+
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="board">📋 Quadro de Tarefas</button>
+    <button class="view-tab" data-view="companies">🏢 Controle de Empresas</button>
+    <button class="view-tab" data-view="directories">📁 Diretórios</button>
+      </div>
+    </aside>
+
+    <div class="main-content">
+      <div class="topbar">
+        <div class="left">
+          <h1 id="pageTitle">Quadro de Tarefas</h1>
+        </div>
+        <div class="right">
+          <span class="badge" id="syncStatus" title="Status da sincronia em tempo real">● conectando</span>
+          <button class="icon-btn" id="darkModeToggle" title="Alternar modo escuro">🌙</button>
+          <button class="link" id="serverFilesBtn">Arquivos do servidor</button>
+          <button class="link" id="manageUsersBtn">Gerenciar usuários</button>
+          <div class="user-chip">
+            <div class="avatar-circle" id="userAvatar"></div>
+            <div>
+              <div style="font-size:12.5px;font-weight:700;color:var(--navy);" id="userName"></div>
+              <div style="font-size:10.5px;color:var(--gray-text);" id="userRole"></div>
+            </div>
+          </div>
+          <button class="icon-btn" id="logoutBtn" title="Sair">⏻</button>
+        </div>
+      </div>
+
+  <div id="boardView">
+  <div class="toolbar" style="padding-bottom:0;">
+    <div class="competencia-picker">
+      <span class="competencia-label">Competência</span>
+      <button type="button" class="comp-nav-btn" id="compPrevBtn" title="Mês anterior">‹</button>
+      <select id="compMonthSelect" class="comp-select"></select>
+      <select id="compYearSelect" class="comp-select comp-select-year"></select>
+      <button type="button" class="comp-nav-btn" id="compNextBtn" title="Próximo mês">›</button>
+      <button type="button" class="comp-today-btn" id="compTodayBtn">Hoje</button>
+    </div>
+    <!-- valor combinado (YYYY-MM) usado pelo resto do sistema -->
+    <select id="competenciaSelect" class="hidden"></select>
+  </div>
+  <div class="toolbar">
+    <select id="filterCompany"><option value="">Todas as empresas</option></select>
+    <select id="filterAssignee"><option value="">Todos os responsáveis</option></select>
+    <select id="filterPriority">
+      <option value="">Todas as prioridades</option>
+      <option value="alta">Alta</option>
+      <option value="media">Média</option>
+      <option value="baixa">Baixa</option>
+    </select>
+    <select id="filterTipo">
+      <option value="">Todos os tipos</option>
+      <option value="imposto">Imposto</option>
+      <option value="parcelamento">Parcelamento</option>
+      <option value="declaracao">Declaração</option>
+      <option value="obrigacao_acessoria">Obrigação acessória</option>
+      <option value="administrativa">Administrativa</option>
+      <option value="outros">Outros</option>
+    </select>
+    <button class="btn-new" id="newTaskBtn">+ Nova tarefa</button>
+  </div>
+
+  <div class="board">
+    <div class="column" data-status="todo">
+      <div class="column-header"><span>A Fazer</span><span class="count-pill" id="count-todo">0</span></div>
+      <div class="cards" id="col-todo"></div>
+    </div>
+    <div class="column" data-status="doing">
+      <div class="column-header"><span>Em Andamento</span><span class="count-pill" id="count-doing">0</span></div>
+      <div class="cards" id="col-doing"></div>
+    </div>
+    <div class="column" data-status="done">
+      <div class="column-header"><span>Concluído</span><span class="count-pill" id="count-done">0</span></div>
+      <div class="cards" id="col-done"></div>
+    </div>
+  </div>
+  </div>
+
+  <div id="companiesView" class="hidden">
+    <div id="companiesError" class="error-banner hidden"></div>
+    <div class="summary-cards" id="summaryCards"></div>
+
+    <div class="toolbar">
+      <input type="text" id="companySearch" placeholder="Buscar por razão social, CNPJ ou código..." style="max-width:280px;" />
+      <select id="filterStatus">
+        <option value="">Todos os status</option>
+        <option value="1">Em Andamento</option>
+        <option value="0">Entregue</option>
+        <option value="-1">Atrasado</option>
+        <option value="null">Sem status</option>
+      </select>
+      <select id="filterEstado"><option value="">Todos os estados</option></select>
+      <select id="filterTributacao"><option value="">Todas as tributações</option></select>
+      <select id="filterUsuario"><option value="">Todos os responsáveis</option></select>
+      <button class="btn-secondary" id="clearCompanyFilters">Limpar filtros</button>
+      <button class="btn-new" id="newCompanyBtn">+ Nova Empresa</button>
+      <span id="companyCount" style="margin-left:auto;font-size:12.5px;color:var(--gray-text);"></span>
+    </div>
+
+    <div class="toolbar" id="importToolbar">
+      <span style="font-size:12.5px;color:var(--gray-text);">📥 Importar/atualizar da planilha:</span>
+      <input type="file" id="importFileInput" accept=".xlsx" />
+      <button class="btn-secondary" id="importBtn">Importar planilha</button>
+      <button class="btn-secondary" id="importUsersTasksBtn">👥 Criar responsáveis e tarefas da planilha</button>
+      <span id="importStatus" style="font-size:12.5px;"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="companies-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Razão Social</th>
+            <th>CNPJ</th>
+            <th>Tributação</th>
+            <th>Estado</th>
+            <th>Responsável</th>
+            <th>Prazo</th>
+            <th>Status</th>
+            <th>Procurações</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="companiesTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="directoriesView" class="hidden">
+    <div id="directoriesError" class="error-banner hidden"></div>
+
+    <div class="toolbar">
+      <div id="dirBreadcrumb" class="breadcrumb"></div>
+      <button class="btn-secondary" id="dirRefreshBtn" style="margin-left:auto;">🔄 Atualizar</button>
+      <button class="btn-secondary" id="dirCreateFolderBtn">+ Criar pasta de cliente</button>
+      <button class="btn-secondary" id="dirEditTemplateBtn">⚙ Editar modelo de pastas</button>
+    </div>
+
+    <p style="font-size:12px;color:var(--gray-text);padding:0 24px;margin:0 0 10px;">
+      Pasta monitorada: <code id="dirWatchedPath" style="background:var(--code-bg);padding:1px 6px;border-radius:4px;"></code>
+    </p>
+
+    <div class="table-wrap">
+      <table class="companies-table" id="dirTable">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Nome</th>
+            <th>Empresa vinculada</th>
+            <th>Tamanho</th>
+            <th>Modificado</th>
+          </tr>
+        </thead>
+        <tbody id="dirTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /app-shell -->
+
+  <!-- Modal: criar estrutura de pastas para uma empresa -->
+  <div class="modal-backdrop hidden" id="createFolderModal">
+    <div class="modal">
+      <h2>Criar pasta de cliente</h2>
+      <form id="createFolderForm">
+        <label>Empresa</label>
+        <select id="cfCompanySelect" required></select>
+
+        <div class="row">
+          <div>
+            <label>Ano</label>
+            <input type="number" id="cfAno" required />
+          </div>
+          <div>
+            <label>Filial (opcional)</label>
+            <input type="text" id="cfFilial" placeholder="ex: 0002" />
+          </div>
+        </div>
+        <p style="font-size:11.5px;color:var(--gray-text);">
+          A pasta será criada como: <strong id="cfPreview">—</strong>
+        </p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cfCancelBtn">Cancelar</button>
+          <button type="submit" class="btn-primary" style="width:auto;margin:0;">Criar estrutura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: editar modelo de pastas -->
+  <div class="modal-backdrop hidden" id="templateModal">
+    <div class="modal modal-wide">
+      <h2 id="templateModalTitle">Editar modelo de pastas</h2>
+      <p style="font-size:12px;color:var(--gray-text);margin-top:-8px;">
+        Cada setor vira uma pasta. Itens "mensais" geram uma subpasta por mês; itens "anuais" geram uma única subpasta.
+      </p>
+      <div id="templateSetores"></div>
+      <button type="button" class="btn-secondary" id="templateAddSetorBtn" style="margin-top:6px;">+ Novo setor</button>
+
+      <label style="margin-top:14px;">Pastas extras (na raiz, fora dos setores)</label>
+      <div id="templateExtras"></div>
+      <button type="button" class="btn-secondary" id="templateAddExtraBtn">+ Nova pasta extra</button>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="templateCancelBtn">Cancelar</button>
+        <button type="button" class="btn-primary" id="templateSaveBtn" style="width:auto;margin:0;">Salvar modelo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: criar/editar tarefa -->
+  <div class="modal-backdrop hidden" id="taskModal">
+    <div class="modal">
+      <h2 id="taskModalTitle">Nova tarefa</h2>
+      <form id="taskForm">
+        <input type="hidden" id="taskId" />
+        <label>Título</label>
+        <input type="text" id="taskTitle" required />
+
+        <label>Descrição</label>
+        <textarea id="taskDesc" rows="3"></textarea>
+
+        <label>Empresa (opcional)</label>
+        <input type="text" id="taskCompanySearch" list="taskCompanyList" placeholder="Digite o código ou nome da empresa..." autocomplete="off" />
+        <datalist id="taskCompanyList"></datalist>
+        <input type="hidden" id="taskCompanyId" />
+        <p id="taskCompanyHint" class="hidden" style="font-size:11px;color:var(--primary);margin:4px 0 0;"></p>
+
+        <div class="row">
+          <div>
+            <label>Prioridade</label>
+            <select id="taskPriority">
+              <option value="alta">Alta</option>
+              <option value="media" selected>Média</option>
+              <option value="baixa">Baixa</option>
+            </select>
+          </div>
+          <div>
+            <label>Responsável</label>
+            <select id="taskAssignee"><option value="">Sem responsável</option></select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Tipo de tarefa</label>
+            <select id="taskTipo">
+              <option value="imposto">Imposto</option>
+              <option value="parcelamento">Parcelamento</option>
+              <option value="declaracao">Declaração</option>
+              <option value="obrigacao_acessoria">Obrigação acessória</option>
+              <option value="administrativa">Administrativa</option>
+              <option value="outros" selected>Outros</option>
+            </select>
+          </div>
+          <div>
+            <label>Competência</label>
+            <input type="month" id="taskCompetencia" />
+          </div>
+        </div>
+
+        <label>Prazo</label>
+        <input type="date" id="taskDue" />
+
+        <label>Recorrência</label>
+        <div class="row">
+          <div>
+            <select id="taskRecurrenceType">
+              <option value="none">Não se repete</option>
+              <option value="daily">Diariamente</option>
+              <option value="weekly">Semanalmente</option>
+              <option value="monthly">Mensalmente</option>
+              <option value="yearly">Anualmente</option>
+            </select>
+          </div>
+          <div id="recurrenceIntervalWrap" class="hidden">
+            <input type="number" id="taskRecurrenceInterval" min="1" value="1" placeholder="A cada..." />
+          </div>
+        </div>
+        <p id="recurrenceHint" class="hidden" style="font-size:11.5px;color:var(--gray-text);margin:4px 0 0;">
+          Ao mover esta tarefa para "Concluído", uma nova ocorrência é criada automaticamente em "A Fazer".
+        </p>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+          <input type="checkbox" id="taskRequerArquivo" style="width:auto;" />
+          Exigir arquivo para concluir esta tarefa?
+        </label>
+        <div id="requerArquivoFields" class="hidden" style="margin-top:8px;">
+          <label style="font-size:11px;">Nome/padrão esperado do arquivo</label>
+          <select id="taskArquivoPadraoSelect" style="margin-bottom:6px;"></select>
+          <input type="text" id="taskArquivoPadrao" placeholder="ex: *das* ou guia_das.pdf" />
+          <label style="font-size:11px;">Pasta relacionada (dentro da pasta monitorada)</label>
+          <input type="text" id="taskPastaRelacionada" placeholder="ex: 123-empresa_exemplo_ltda/2026/01_FISCAL/..." />
+          <p style="font-size:11px;color:var(--gray-text);margin:4px 0 0;">
+            Sem o arquivo correspondente nessa pasta, a tarefa não poderá ser movida para "Concluído".
+          </p>
+        </div>
+
+        <label>Arquivos anexados</label>
+        <div class="file-list" id="fileList"></div>
+        <input type="file" id="fileInput" />
+        <button type="button" class="btn-secondary" id="linkServerFileBtn" style="margin-top:8px;">
+          🔗 Vincular arquivo já existente no servidor
+        </button>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelTaskBtn">Cancelar</button>
+          <button type="submit" class="btn-primary" style="width:auto;margin:0;">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: gerenciar usuários -->
+  <div class="modal-backdrop hidden" id="usersModal">
+    <div class="modal">
+      <h2>Usuários e permissões</h2>
+      <div id="usersList"></div>
+      <hr style="margin:16px 0;border:none;border-top:1px solid var(--gray-border);" />
+      <h2 style="font-size:14px;">Adicionar usuário</h2>
+      <form id="newUserForm">
+        <label>Nome</label>
+        <input type="text" id="newUserName" required />
+        <label>Email</label>
+        <input type="email" id="newUserEmail" required />
+        <label>Senha</label>
+        <input type="password" id="newUserPassword" required />
+        <label>Papel</label>
+        <select id="newUserRole">
+          <option value="member">Membro</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="closeUsersBtn">Fechar</button>
+          <button type="submit" class="btn-primary" style="width:auto;margin:0;">Adicionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: arquivos indexados da pasta do servidor -->
+  <div class="modal-backdrop hidden" id="serverFilesModal">
+    <div class="modal">
+      <h2 id="serverFilesTitle">Arquivos do servidor</h2>
+      <p style="font-size:12.5px;color:var(--gray-text);margin-top:-8px;">
+        Arquivos detectados automaticamente na pasta monitorada do servidor.
+        Clique em "Vincular" para associá-los a uma tarefa.
+      </p>
+      <div id="serverFilesList"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="closeServerFilesBtn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: nova empresa -->
+  <div class="modal-backdrop hidden" id="newCompanyModal">
+    <div class="modal">
+      <h2>Nova Empresa</h2>
+      <form id="newCompanyForm">
+        <label>Razão Social *</label>
+        <input type="text" id="newCompRazaoSocial" required />
+
+        <div class="row">
+          <div>
+            <label>CNPJ</label>
+            <input type="text" id="newCompCnpj" placeholder="00.000.000/0000-00" />
+          </div>
+          <div>
+            <label>Tributação (regime)</label>
+            <select id="newCompTributacao">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Município</label>
+            <input type="text" id="newCompMunicipio" />
+          </div>
+          <div>
+            <label>Estado</label>
+            <input type="text" id="newCompEstado" maxlength="2" placeholder="SP" style="text-transform:uppercase;" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Responsável</label>
+            <select id="newCompUsuario"><option value="">Sem responsável</option></select>
+          </div>
+          <div>
+            <label>Prazo</label>
+            <input type="date" id="newCompDataLimite" />
+          </div>
+        </div>
+
+        <label>Procurações</label>
+        <input type="text" id="newCompProcuracoes" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelNewCompanyBtn">Cancelar</button>
+          <button type="submit" class="btn-primary" style="width:auto;margin:0;">Cadastrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: ficha completa da empresa -->
+  <div class="modal-backdrop hidden" id="fichaModal">
+    <div class="modal modal-wide">
+      <div id="fichaContent">Carregando...</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="closeFichaBtn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="companies.js"></script>
+  <script src="directories.js"></script>
+</body>
+</html>

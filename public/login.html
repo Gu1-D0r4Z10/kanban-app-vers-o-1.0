@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login - Painel de Tarefas</title>
+<link rel="stylesheet" href="style.css" />
+<script>
+  if (localStorage.getItem('darkMode') === '1') {
+    document.documentElement.classList.add('dark-mode');
+  }
+</script>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>Painel de Tarefas</h1>
+      <p class="sub">Entre com sua conta da empresa</p>
+
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" />
+
+        <label for="password">Senha</label>
+        <input type="password" id="password" required autocomplete="current-password" />
+
+        <div class="error-msg" id="errorMsg"></div>
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+
+    // Se já tiver um token salvo, vai direto para o painel
+    if (localStorage.getItem('token')) {
+      window.location.href = '/index.html';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Não foi possível entrar.';
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/index.html';
+      } catch (err) {
+        errorMsg.textContent = 'Erro de conexão com o servidor.';
+      }
+    });
+  </script>
+</body>
+</html>
