@@ -80,6 +80,20 @@ CREATE TABLE IF NOT EXISTS tax_regimes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Catálogo mestre de obrigações fiscais (nova arquitetura de "tarefas").
+-- Cada linha é um tipo de obrigação reconhecido pelo sistema (ex: tipo
+-- "federal", campo "DAS"). "Relatórios" foi deliberadamente excluído do
+-- CHECK abaixo: essa categoria não tem nenhum dado real na planilha até
+-- o momento (ver RELATORIO_REESTRUTURACAO_PLANILHA.md), então não nasce
+-- catálogo para ela — pode ser revisitado no futuro se passar a ter uso.
+CREATE TABLE IF NOT EXISTS obrigacoes_catalogo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo TEXT NOT NULL CHECK(tipo IN ('municipal','estadual','federal','anual')),
+  campo TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(tipo, campo)
+);
+
 CREATE TABLE IF NOT EXISTS files (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
