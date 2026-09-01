@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+
+# Configuração local com segredos
+.env
+
+# Banco de dados local
+db/kanban.db
+db/kanban.db-wal
+db/kanban.db-shm
+
+# Arquivos anexados pelos usuários
+uploads/*
+!uploads/.gitkeep
+
+# Pasta monitorada pela indexação reversa
+watched-files/
+
+# Log de instalação
+npm-install.log
